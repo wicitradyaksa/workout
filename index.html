@@ -98,7 +98,7 @@
 <body>
 <header>
   <h1>Full Body · Dumbbell + Bench</h1>
-  <div class="sub" id="sub">3 days a week · about 40–45 min</div>
+  <div class="sub" id="sub">3 days a week · about 45–50 min</div>
   <div class="bar"><i id="bar"></i></div>
 </header>
 
@@ -169,6 +169,8 @@ const EX = [
     cue: 'Feet planted, shoulder blades pinched, lower to chest, press up.' },
   { id: 'row', name: 'Single-arm row', sets: 2, reps: '8–12 / arm', rest: 120, start: 20, goal: 45, count: 'kg, one dumbbell',
     cue: 'Hand and knee on the bench, back flat, pull the elbow to your hip.' },
+  { id: 'pull', name: 'Pull-up', sets: 2, reps: '5–10', rest: 120, start: 0, goal: 10, bw: true, count: 'kg added',
+    cue: 'Full hang at the bottom, pull until your chin is over the bar, lower under control. No kicking or swinging. Once you hit 10 on both sets, add weight: hold a dumbbell between your feet. If you drop below 5 reps, put one foot on the bench for a little help.' },
   { id: 'ohp', name: 'Overhead press', sets: 2, reps: '6–10', rest: 120, start: 10, goal: 30, count: 'kg each hand',
     cue: 'Stand tall, ribs down, press straight overhead without leaning back.' },
   { id: 'rdl', name: 'Romanian deadlift', sets: 2, reps: '6–10', rest: 120, start: 17.5, goal: 40, count: 'kg each hand',
@@ -197,7 +199,10 @@ const stepOf = e => e.step || STEP;
 const wOf = e => S.w[e.id] ?? e.start;
 const setsOf = e => S.easy ? 1 : e.sets;
 const fmt = n => (Math.round(n * 100) / 100).toString();
+const wl = (e, v) => e.bw ? (v > 0 ? '+' + fmt(v) : 'BW') : fmt(v);
+const unit = (e, v) => e.bw ? (v > 0 ? 'kg added' : 'bodyweight') : e.count;
 function shownW(e) {
+  if (e.bw && S.easy) return 0;
   if (!S.easy) return wOf(e);
   const st = stepOf(e);
   return Math.max(st, Math.round(wOf(e) * 0.6 / st) * st);
@@ -217,13 +222,13 @@ function card(e, fin) {
     <div class="top">
       <div><div class="name">${e.name}</div>
         <div class="meta">${n} × ${e.reps}${e.rest ? ` · rest ${e.rest >= 60 ? e.rest / 60 + ' min' : e.rest + ' s'}` : ' · during rest'}</div></div>
-      <div class="weight"><b>${fmt(shownW(e))}</b><small>${e.count}${S.easy ? ' (easy)' : ''}</small></div>
+      <div class="weight"><b>${wl(e, shownW(e))}</b><small>${unit(e, shownW(e))}${S.easy ? ' (easy)' : ''}</small></div>
     </div>
     <div class="sets">${sets}</div>
-    ${pct !== null ? `<div class="prog"><span>${fmt(e.start)}</span><div class="track"><i style="width:${pct * 100}%"></i></div><span>goal ${fmt(e.goal)}</span></div>` : ''}
+    ${pct !== null ? `<div class="prog"><span>${wl(e, e.start)}</span><div class="track"><i style="width:${pct * 100}%"></i></div><span>goal ${wl(e, e.goal)}</span></div>` : ''}
     <div class="actions">
-      <button class="btn up" data-up="${e.id}">Next weight → ${fmt(w + st)}</button>
-      <button class="btn ghost" data-down="${e.id}">Step down → ${fmt(Math.max(0, w - st))}</button>
+      <button class="btn up" data-up="${e.id}">Next weight → ${wl(e, w + st)}</button>
+      <button class="btn ghost" data-down="${e.id}">Step down → ${wl(e, Math.max(0, w - st))}</button>
     </div>
     <details class="cue"><summary>Form cue</summary><p>${e.cue}</p></details>
   </div>`;
@@ -258,7 +263,7 @@ document.addEventListener('click', ev => {
     const id = b.dataset.up || b.dataset.down, e = ALL.find(x => x.id === id), st = stepOf(e);
     const nw = b.dataset.up ? wOf(e) + st : Math.max(0, wOf(e) - st);
     S.w[id] = Math.round(nw * 100) / 100; save(); render();
-    toast(`${e.name}: ${fmt(S.w[id])} kg from now on`);
+    toast(`${e.name}: ${wl(e, S.w[id])} ${unit(e, S.w[id])} from now on`);
   }
 });
 
