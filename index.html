@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f3864">
+<title>Dumbbell Workout</title>
+<style>
+  :root {
+    --bg: #f3f5f9; --card: #ffffff; --text: #16202e; --muted: #6b7686;
+    --line: #e3e7ee; --brand: #1f3864; --accent: #2f6fdb; --ok: #1f9d55;
+    --warn: #c2410c; --chip: #eef2f8; --tick: #e7f6ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f141b; --card: #18202b; --text: #e8edf4; --muted: #95a1b2;
+      --line: #2a3442; --brand: #0b1a30; --accent: #5b94f0; --ok: #34c27a;
+      --warn: #f08a4b; --chip: #222d3a; --tick: #173527;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+
+  header { background: var(--brand); color: #fff; padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
+    position: sticky; top: 0; z-index: 5; }
+  header h1 { margin: 0; font-size: 19px; }
+  header .sub { font-size: 13px; opacity: .8; margin-top: 2px; }
+  .bar { height: 6px; background: rgba(255,255,255,.2); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: #7fd3a5; transition: width .3s; }
+
+  main { padding: 12px; max-width: 560px; margin: 0 auto; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .toggle { display: flex; justify-content: space-between; align-items: center; background: var(--card);
+    border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; border: 1px solid var(--line); }
+  .switch { width: 50px; height: 30px; border-radius: 15px; background: var(--line); position: relative; transition: .2s; flex: none; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+    background: #fff; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  .switch.on { background: var(--ok); } .switch.on::after { left: 23px; }
+
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 4px 8px; }
+  .card { background: var(--card); border-radius: 16px; padding: 14px; margin-bottom: 10px;
+    border: 1px solid var(--line); transition: background .2s; }
+  .card.done { background: var(--tick); }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .name { font-weight: 700; font-size: 17px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .weight { text-align: right; flex: none; }
+  .weight b { font-size: 26px; font-variant-numeric: tabular-nums; }
+  .weight small { display: block; color: var(--muted); font-size: 12px; }
+
+  .sets { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .set { min-width: 64px; height: 48px; padding: 0 12px; border-radius: 12px; background: var(--chip);
+    font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .set.on { background: var(--ok); color: #fff; }
+
+  .prog { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+  .prog .track { flex: 1; height: 6px; background: var(--chip); border-radius: 3px; overflow: hidden; }
+  .prog .track i { display: block; height: 100%; background: var(--accent); }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .btn { height: 44px; border-radius: 12px; font-weight: 600; font-size: 14px; padding: 0 10px; }
+  .btn.up { background: var(--accent); color: #fff; }
+  .btn.ghost { background: var(--chip); }
+  .btn.full { grid-column: 1 / -1; }
+  details.cue { margin-top: 10px; font-size: 14px; color: var(--muted); }
+  details.cue summary { cursor: pointer; color: var(--accent); font-weight: 600; list-style: none; }
+  details.cue summary::-webkit-details-marker { display: none; }
+  details.cue p { margin: 6px 0 0; }
+
+  .info { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 4px 14px; margin-bottom: 10px; }
+  .info details { border-bottom: 1px solid var(--line); padding: 12px 0; }
+  .info details:last-child { border-bottom: 0; }
+  .info summary { font-weight: 700; cursor: pointer; }
+  .info ol, .info ul { margin: 8px 0 0; padding-left: 20px; color: var(--muted); font-size: 14px; }
+  .info li { margin-bottom: 6px; }
+  .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .stat { color: var(--muted); font-size: 13px; text-align: center; margin: 8px 0 0; }
+
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--card);
+    border-top: 1px solid var(--line); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+  .dock .inner { max-width: 560px; margin: 0 auto; display: flex; gap: 8px; align-items: center; }
+  .timer { flex: 1; height: 52px; border-radius: 14px; background: var(--chip); display: flex;
+    align-items: center; justify-content: center; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .timer.run { background: var(--accent); color: #fff; }
+  .timer.end { background: var(--warn); color: #fff; }
+  .dock .btn { height: 52px; min-width: 64px; }
+  .finish { background: var(--ok); color: #fff; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: #111a; color: #fff; backdrop-filter: blur(6px); padding: 10px 16px; border-radius: 12px;
+    font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 20; max-width: 90vw; text-align: center; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Full Body · Dumbbell + Bench</h1>
+  <div class="sub" id="sub">3 days a week · about 40–45 min</div>
+  <div class="bar"><i id="bar"></i></div>
+</header>
+
+<main>
+  <div class="toggle">
+    <div>
+      <div style="font-weight:700">Easy week</div>
+      <div class="meta">Every 6th week: 1 set, about 60% weight</div>
+    </div>
+    <button class="switch" id="easy" aria-label="Easy week"></button>
+  </div>
+
+  <h2>Main workout</h2>
+  <div id="main"></div>
+
+  <h2>Finisher (optional)</h2>
+  <div id="fin"></div>
+
+  <h2>Rules</h2>
+  <div class="info">
+    <details open>
+      <summary>The one rule</summary>
+      <ul>
+        <li>Work inside the rep range. Hit the <b>top</b> of the range on <b>all sets</b> with clean form → tap <b>Next weight</b>, then start again at the bottom of the range.</li>
+        <li>Not at the top yet → same weight, try to add 1 rep somewhere.</li>
+        <li>Reps go down 3 sessions in a row → tap <b>Step down</b>, then climb again.</li>
+        <li>Only 2 sets, so both must be real work: end each set with 1–2 reps left in the tank.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>How to run it</summary>
+      <ol>
+        <li>Week 1: find your level. Easily past the top of the range → step up. Can't reach the bottom on both sets → step down.</li>
+        <li>Warm up 5 min, then 1–2 easy practice sets of each main lift (they don't count).</li>
+        <li>Rest about 2 min between sets. Split squat: 2 sets on each leg, weaker leg first.</li>
+        <li>Calf raises: one set per leg during bench rest, one during overhead-press rest.</li>
+        <li>Lift stalls 3–4 weeks while sleeping and eating well → add a 3rd set to that lift only.</li>
+        <li>Optional 4th session after about 3 months if you recover well. Keep a rest day between most sessions.</li>
+        <li>Safety: don't grind a failing press. Lower the dumbbells to your thighs, sit up, put them down.</li>
+        <li>Protein 1.6–2 g per kg bodyweight, sleep 7–9 hours.</li>
+      </ol>
+    </details>
+    <details>
+      <summary>Backup &amp; settings</summary>
+      <div class="tools">
+        <button class="btn ghost" id="export">Copy backup</button>
+        <button class="btn ghost" id="import">Restore backup</button>
+        <button class="btn ghost full" id="reset">Reset all weights to start</button>
+      </div>
+      <p class="stat">Weights are saved in this browser on this phone. Copy a backup now and then.</p>
+    </details>
+  </div>
+  <p class="stat" id="stats"></p>
+</main>
+
+<div class="dock">
+  <div class="inner">
+    <button class="btn ghost" id="minus">−15</button>
+    <button class="timer" id="timer">Rest 2:00</button>
+    <button class="btn ghost" id="plus">+15</button>
+    <button class="btn finish" id="finish">Done</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STEP = 2.5;
+const EX = [
+  { id: 'bench', name: 'Bench press', sets: 2, reps: '6–10', rest: 120, start: 17.5, goal: 50, count: 'kg each hand',
+    cue: 'Feet planted, shoulder blades pinched, lower to chest, press up.' },
+  { id: 'row', name: 'Single-arm row', sets: 2, reps: '8–12 / arm', rest: 120, start: 20, goal: 45, count: 'kg, one dumbbell',
+    cue: 'Hand and knee on the bench, back flat, pull the elbow to your hip.' },
+  { id: 'ohp', name: 'Overhead press', sets: 2, reps: '6–10', rest: 120, start: 10, goal: 30, count: 'kg each hand',
+    cue: 'Stand tall, ribs down, press straight overhead without leaning back.' },
+  { id: 'rdl', name: 'Romanian deadlift', sets: 2, reps: '6–10', rest: 120, start: 17.5, goal: 40, count: 'kg each hand',
+    cue: 'Soft knees, push hips back, dumbbells close to the legs, back flat.' },
+  { id: 'split', name: 'Split squat', sets: 2, reps: '8–12 / leg', rest: 120, start: 10, goal: 40, count: 'kg each hand',
+    perSide: true, cue: 'Rear foot on the bench, torso upright, front thigh to parallel. All reps on one leg, then the other. Weaker leg first.' },
+  { id: 'carry', name: "Farmer's carry", sets: 2, reps: '30–45 s', rest: 90, start: 20, goal: 40, count: 'kg each hand',
+    cue: 'Stand tall, shoulders down and back, short steady steps. Top of range = 45 s on both sets. Put them down if your grip slips.' },
+  { id: 'calf', name: 'Calf raise', sets: 2, reps: '12–15 / leg', rest: 0, start: 10, goal: 30, count: 'kg, one dumbbell',
+    perSide: true, cue: 'Ball of one foot on a step or plate, free hand on a wall. Full stretch at the bottom, 1 s pause at the top. Do these during bench and overhead-press rest.' },
+];
+const FIN = [
+  { id: 'rdelt', name: 'Rear-delt fly', sets: 2, reps: '12–15', rest: 60, start: 5, step: 1.25, count: 'kg each hand',
+    cue: 'Hinge forward, arms slightly bent, raise out to the sides, squeeze the shoulder blades.' },
+  { id: 'tri', name: 'Lying triceps extension', sets: 2, reps: '10–12', rest: 60, start: 10, count: 'kg, one dumbbell',
+    cue: 'Lie on the bench, bend only the elbows to lower the dumbbell behind your head, then extend.' },
+];
+const ALL = [...EX, ...FIN];
+const KEY = 'dbWorkout.v1';
+
+let S = load();
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.w) return s; } catch (e) {}
+  return { w: {}, ticks: {}, easy: false, sessions: 0, last: null };
+}
+let storageOk = true;
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch (e) { if (storageOk) { storageOk = false; toast('This browser is not saving data. Use Copy backup before closing.'); } }
+}
+const stepOf = e => e.step || STEP;
+const wOf = e => S.w[e.id] ?? e.start;
+const setsOf = e => S.easy ? 1 : e.sets;
+const fmt = n => (Math.round(n * 100) / 100).toString();
+function shownW(e) {
+  if (!S.easy) return wOf(e);
+  const st = stepOf(e);
+  return Math.max(st, Math.round(wOf(e) * 0.6 / st) * st);
+}
+
+function card(e, fin) {
+  const n = setsOf(e), w = wOf(e), st = stepOf(e);
+  const ticks = S.ticks[e.id] || [];
+  const done = ticks.filter(Boolean).length >= n;
+  const pct = e.goal ? Math.max(0, Math.min(1, (w - e.start) / (e.goal - e.start))) : null;
+  let sets = '';
+  for (let i = 0; i < n; i++) {
+    const label = e.perSide ? `Set ${i + 1} · L+R` : `Set ${i + 1}`;
+    sets += `<button class="set ${ticks[i] ? 'on' : ''}" data-tick="${e.id}" data-i="${i}">${ticks[i] ? '✓ ' : ''}${label}</button>`;
+  }
+  return `<div class="card ${done ? 'done' : ''}">
+    <div class="top">
+      <div><div class="name">${e.name}</div>
+        <div class="meta">${n} × ${e.reps}${e.rest ? ` · rest ${e.rest >= 60 ? e.rest / 60 + ' min' : e.rest + ' s'}` : ' · during rest'}</div></div>
+      <div class="weight"><b>${fmt(shownW(e))}</b><small>${e.count}${S.easy ? ' (easy)' : ''}</small></div>
+    </div>
+    <div class="sets">${sets}</div>
+    ${pct !== null ? `<div class="prog"><span>${fmt(e.start)}</span><div class="track"><i style="width:${pct * 100}%"></i></div><span>goal ${fmt(e.goal)}</span></div>` : ''}
+    <div class="actions">
+      <button class="btn up" data-up="${e.id}">Next weight → ${fmt(w + st)}</button>
+      <button class="btn ghost" data-down="${e.id}">Step down → ${fmt(Math.max(0, w - st))}</button>
+    </div>
+    <details class="cue"><summary>Form cue</summary><p>${e.cue}</p></details>
+  </div>`;
+}
+
+function render() {
+  document.getElementById('main').innerHTML = EX.map(e => card(e)).join('');
+  document.getElementById('fin').innerHTML = FIN.map(e => card(e, true)).join('');
+  document.getElementById('easy').classList.toggle('on', S.easy);
+  let total = 0, done = 0;
+  EX.forEach(e => { total += setsOf(e); done += (S.ticks[e.id] || []).slice(0, setsOf(e)).filter(Boolean).length; });
+  document.getElementById('bar').style.width = (total ? done / total * 100 : 0) + '%';
+  document.getElementById('sub').textContent = `${done}/${total} main sets done${S.easy ? ' · easy week' : ''}`;
+  document.getElementById('stats').textContent = S.sessions
+    ? `${S.sessions} workout${S.sessions > 1 ? 's' : ''} logged · last on ${new Date(S.last).toLocaleDateString()}`
+    : 'No workouts logged yet. Tap Done when you finish one.';
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  if (b.dataset.tick) {
+    const id = b.dataset.tick, i = +b.dataset.i, e = ALL.find(x => x.id === id);
+    const t = S.ticks[id] = S.ticks[id] || [];
+    t[i] = !t[i];
+    if (t[i] && e.rest) startTimer(e.rest);
+    save(); render();
+  } else if (b.dataset.up || b.dataset.down) {
+    const id = b.dataset.up || b.dataset.down, e = ALL.find(x => x.id === id), st = stepOf(e);
+    const nw = b.dataset.up ? wOf(e) + st : Math.max(0, wOf(e) - st);
+    S.w[id] = Math.round(nw * 100) / 100; save(); render();
+    toast(`${e.name}: ${fmt(S.w[id])} kg from now on`);
+  }
+});
+
+document.getElementById('easy').onclick = () => { S.easy = !S.easy; save(); render(); };
+document.getElementById('finish').onclick = () => {
+  const any = Object.values(S.ticks).some(t => t.some(Boolean));
+  if (!any) { toast('Tick some sets first'); return; }
+  if (!confirm('Finish this workout? Ticks will be cleared, weights are kept.')) return;
+  S.sessions++; S.last = Date.now(); S.ticks = {}; save(); render(); stopTimer();
+  toast('Workout logged. Nice work!');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+document.getElementById('reset').onclick = () => {
+  if (!confirm('Reset all weights to the starting weights?')) return;
+  S.w = {}; save(); render(); toast('Weights reset');
+};
+document.getElementById('export').onclick = async () => {
+  const data = JSON.stringify(S);
+  try { await navigator.clipboard.writeText(data); toast('Backup copied. Paste it into a note.'); }
+  catch (e) { prompt('Copy this backup text:', data); }
+};
+document.getElementById('import').onclick = () => {
+  const txt = prompt('Paste your backup text:'); if (!txt) return;
+  try { const s = JSON.parse(txt); if (!s.w) throw 0; S = s; save(); render(); toast('Backup restored'); }
+  catch (e) { toast('That backup text is not valid'); }
+};
+
+// ---- rest timer ----
+let end = 0, tick = null, ac = null;
+const tEl = document.getElementById('timer');
+function beep() {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    [0, .25, .5].forEach(d => { const o = ac.createOscillator(), g = ac.createGain();
+      o.frequency.value = 880; g.gain.value = .2; o.connect(g); g.connect(ac.destination);
+      o.start(ac.currentTime + d); o.stop(ac.currentTime + d + .15); });
+  } catch (e) {}
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+}
+function show(sec) { const s = Math.max(0, Math.ceil(sec)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
+function startTimer(sec) {
+  end = Date.now() + sec * 1000; tEl.className = 'timer run';
+  try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {}
+  clearInterval(tick); tick = setInterval(update, 250); update();
+}
+function update() {
+  const left = (end - Date.now()) / 1000;
+  if (left <= 0) { clearInterval(tick); tick = null; tEl.textContent = 'Go!'; tEl.className = 'timer end'; beep(); return; }
+  tEl.textContent = show(left);
+}
+function stopTimer() { clearInterval(tick); tick = null; end = 0; tEl.className = 'timer'; tEl.textContent = 'Rest 2:00'; }
+tEl.onclick = () => tick ? stopTimer() : startTimer(120);
+document.getElementById('plus').onclick = () => { if (tick) { end += 15000; update(); } else startTimer(15); };
+document.getElementById('minus').onclick = () => { if (tick) { end -= 15000; update(); } };
+
+render();
+</script>
+</body>
+</html>
