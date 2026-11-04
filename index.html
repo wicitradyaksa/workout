@@ -114,8 +114,6 @@
   <h2>Main workout</h2>
   <div id="main"></div>
 
-  <h2>Finisher (optional)</h2>
-  <div id="fin"></div>
 
   <h2>Rules</h2>
   <div class="info">
@@ -182,13 +180,7 @@ const EX = [
   { id: 'calf', name: 'Calf raise', sets: 2, reps: '12–15 / leg', rest: 0, start: 10, goal: 30, count: 'kg, one dumbbell',
     perSide: true, cue: 'Ball of one foot on a step or plate, free hand on a wall. Full stretch at the bottom, 1 s pause at the top. Do these during bench and overhead-press rest.' },
 ];
-const FIN = [
-  { id: 'rdelt', name: 'Rear-delt fly', sets: 2, reps: '12–15', rest: 60, start: 5, step: 1.25, count: 'kg each hand',
-    cue: 'Hinge forward, arms slightly bent, raise out to the sides, squeeze the shoulder blades.' },
-  { id: 'tri', name: 'Lying triceps extension', sets: 2, reps: '10–12', rest: 60, start: 10, count: 'kg, one dumbbell',
-    cue: 'Lie on the bench, bend only the elbows to lower the dumbbell behind your head, then extend.' },
-];
-const ALL = [...EX, ...FIN];
+const ALL = EX;
 const KEY = 'dbWorkout.v1';
 
 let S = load();
@@ -239,7 +231,6 @@ function card(e, fin) {
 
 function render() {
   document.getElementById('main').innerHTML = EX.map(e => card(e)).join('');
-  document.getElementById('fin').innerHTML = FIN.map(e => card(e, true)).join('');
   document.getElementById('easy').classList.toggle('on', S.easy);
   let total = 0, done = 0;
   EX.forEach(e => { total += setsOf(e); done += (S.ticks[e.id] || []).slice(0, setsOf(e)).filter(Boolean).length; });
