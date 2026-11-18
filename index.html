@@ -93,6 +93,22 @@
     background: #111a; color: #fff; backdrop-filter: blur(6px); padding: 10px 16px; border-radius: 12px;
     font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 20; max-width: 90vw; text-align: center; }
   .toast.show { opacity: 1; }
+
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+  .day { background: rgba(255,255,255,.1); border-radius: 10px; padding: 5px 0 6px; text-align: center;
+    color: #fff; font-size: 11px; line-height: 1.25; position: relative; }
+  .day b { display: block; font-size: 13px; }
+  .day.today { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.7); }
+  .day.sel { background: #fff; color: #1f3864; }
+  .day.done::after { content: "✓"; position: absolute; top: -5px; right: -2px; background: #34c27a; color: #fff;
+    width: 16px; height: 16px; border-radius: 50%; font-size: 10px; line-height: 16px; }
+  .hero { font-size: 22px; font-weight: 700; margin: 2px 0 4px; }
+  .note { background: var(--card); border: 1px dashed var(--line); border-radius: 14px; padding: 12px 14px;
+    margin: 10px 0; font-size: 14px; color: var(--muted); }
+  .note b { color: var(--text); }
+  .list { margin: 10px 0 0; padding-left: 20px; color: var(--muted); font-size: 14px; }
+  .list li { margin-bottom: 5px; }
+  .warn { color: var(--warn); font-size: 14px; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -100,9 +116,12 @@
   <h1>Full Body · Dumbbell + Bench</h1>
   <div class="sub" id="sub">3 days a week · about 45–50 min</div>
   <div class="bar"><i id="bar"></i></div>
+  <nav class="days" id="days"></nav>
 </header>
 
 <main>
+  <section id="dayView"></section>
+  <section id="liftView">
   <div class="toggle">
     <div>
       <div style="font-weight:700">Easy week</div>
@@ -113,10 +132,21 @@
 
   <h2>Main workout</h2>
   <div id="main"></div>
-
+  <div class="note"><b>Plus (optional): a 15–20 min brisk walk</b> later today, e.g. after a meal. It helps you reach about 150 walking minutes a week.</div>
+  </section>
 
   <h2>Rules</h2>
   <div class="info">
+    <details>
+      <summary>Weekly schedule</summary>
+      <ul>
+        <li><b>Mon / Wed / Fri:</b> workout, plus an optional 15–20 min walk.</li>
+        <li><b>Tue / Thu:</b> brisk walk, 45–60 min. Pace: you can talk, but not sing.</li>
+        <li><b>Sat:</b> sprints (6–8 × 50 m) and a 15 min walk. Saturday keeps a rest day before the next workout.</li>
+        <li><b>Sun:</b> full rest. Normal daily steps only.</li>
+        <li>Aim for about 8,000+ steps a day. Tap any day at the top to see or log it.</li>
+      </ul>
+    </details>
     <details open>
       <summary>The one rule</summary>
       <ul>
@@ -187,8 +217,76 @@ const KEY = 'dbWorkout.v1';
 
 let S = load();
 function load() {
-  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.w) return s; } catch (e) {}
-  return { w: {}, ticks: {}, easy: false, sessions: 0, last: null };
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  if (!s || !s.w) s = { w: {}, ticks: {}, easy: false, sessions: 0, last: null };
+  return fill(s);
+}
+function fill(s) {
+  s.done = s.done || {}; s.cticks = s.cticks || {}; s.sprintCount = s.sprintCount || 0;
+  return s;
+}
+
+// ---- weekly schedule (0 = Sun ... 6 = Sat) ----
+const PLAN = { 1: 'lift', 2: 'walk', 3: 'lift', 4: 'walk', 5: 'lift', 6: 'sprint', 0: 'rest' };
+const ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAYN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const LABEL = { lift: 'Lift', walk: 'Walk', sprint: 'Sprint', rest: 'Rest' };
+let sel = new Date().getDay();
+function weekDate(dow) {           // date of that weekday in the current Mon-Sun week
+  const d = new Date(); d.setHours(12, 0, 0, 0);
+  const off = (d.getDay() + 6) % 7;  // days since Monday
+  d.setDate(d.getDate() - off + (dow + 6) % 7);
+  return d;
+}
+const keyOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const selKey = () => keyOf(weekDate(sel));
+function sprintEffort() {
+  const n = S.done[selKey()] ? Math.max(0, S.sprintCount - 1) : S.sprintCount;
+  if (n < 2) return ['70%', 'Smooth and relaxed. You are teaching your legs to sprint again.'];
+  if (n < 4) return ['80%', 'Fast but relaxed. Still well below all-out.'];
+  if (n < 6) return ['90%', 'Fast. Stay relaxed in the face and shoulders.'];
+  return ['95%', 'Near all-out. Never force the last sprint if your legs feel tight.'];
+}
+function ctick(id, label) {
+  const on = S.cticks[id];
+  return `<button class="set ${on ? 'on' : ''}" data-ctick="${id}">${on ? '✓ ' : ''}${label}</button>`;
+}
+function dayHTML(type) {
+  const d = weekDate(sel), date = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
+  const logged = S.done[selKey()];
+  const tag = logged ? `<div class="meta" style="color:var(--ok);font-weight:600">✓ Logged</div>` : '';
+  if (type === 'walk') return `<h2>${date}</h2>
+    <div class="card ${logged ? 'done' : ''}"><div class="hero">Brisk walk · 45–60 min</div>
+      <div class="meta">Pace: you can talk in full sentences, but not sing.</div>${tag}
+      <ul class="list"><li>Outdoors, or around the house if the weather is bad.</li>
+      <li>Two or three shorter walks count too, e.g. 3 × 15–20 min.</li>
+      <li>A hill or stairs makes it harder without going faster.</li></ul></div>
+    <div class="note">Tap <b>Done</b> when you finish the walk.</div>`;
+  if (type === 'sprint') {
+    const [pct, txt] = sprintEffort();
+    let sp = '';
+    for (let i = 0; i < 8; i++) sp += ctick('sp' + i, i < 6 ? `${i + 1}` : `${i + 1} (opt)`);
+    return `<h2>${date}</h2>
+    <div class="card ${logged ? 'done' : ''}"><div class="hero">Sprints · about 30 min</div>
+      <div class="meta">Session ${S.done[selKey()] ? S.sprintCount : S.sprintCount + 1} · effort today: <b>${pct}</b>. ${txt}</div>${tag}
+      <div class="meta" style="margin-top:12px;font-weight:600">1. Warm-up (10 min)</div>
+      <div class="sets">${ctick('wu0', 'Easy jog')}${ctick('wu1', 'Leg swings')}${ctick('wu2', '2–3 build-ups')}</div>
+      <div class="meta" style="margin-top:12px;font-weight:600">2. Sprints: 50 m, walk back slowly (timer starts at 2:00)</div>
+      <div class="sets">${sp}</div>
+      <div class="meta" style="margin-top:12px;font-weight:600">3. Cool-down</div>
+      <div class="sets">${ctick('cd0', '15 min walk')}</div>
+      <div class="warn">Stop at the first tight or pulling feeling in the back of your thigh. An uphill sprint is the safer option.</div></div>`;
+  }
+  return `<h2>${date}</h2>
+    <div class="card"><div class="hero">Rest day</div>
+      <div class="meta">Recovery is part of the plan. Normal daily steps only, about 8,000+.</div>
+      <ul class="list"><li>Light stretching or an easy stroll is fine.</li><li>Sleep 7–9 hours and hit your protein.</li></ul></div>`;
+}
+function weekSummary() {
+  let lift = 0, cardio = 0;
+  ORDER.forEach(dw => { const v = S.done[keyOf(weekDate(dw))]; if (v === 'lift') lift++; else if (v) cardio++; });
+  return `This week: ${lift}/3 workouts · ${cardio}/3 cardio days`;
 }
 let storageOk = true;
 function save() {
@@ -235,15 +333,32 @@ function card(e, fin) {
 }
 
 function render() {
-  document.getElementById('main').innerHTML = EX.map(e => card(e)).join('');
-  document.getElementById('easy').classList.toggle('on', S.easy);
+  const type = PLAN[sel], today = new Date().getDay();
+  document.getElementById('days').innerHTML = ORDER.map(dw =>
+    `<button class="day ${dw === sel ? 'sel' : ''} ${dw === today ? 'today' : ''} ${S.done[keyOf(weekDate(dw))] ? 'done' : ''}" data-day="${dw}">
+      <b>${DAYN[dw]}</b>${LABEL[PLAN[dw]]}</button>`).join('');
+  document.getElementById('liftView').hidden = type !== 'lift';
+  document.getElementById('dayView').innerHTML = type === 'lift' ? '' : dayHTML(type);
+  document.getElementById('finish').style.visibility = type === 'rest' ? 'hidden' : '';
+
   let total = 0, done = 0;
-  EX.forEach(e => { total += setsOf(e); done += (S.ticks[e.id] || []).slice(0, setsOf(e)).filter(Boolean).length; });
+  if (type === 'lift') {
+    document.getElementById('main').innerHTML = EX.map(e => card(e)).join('');
+    document.getElementById('easy').classList.toggle('on', S.easy);
+    EX.forEach(e => { total += setsOf(e); done += (S.ticks[e.id] || []).slice(0, setsOf(e)).filter(Boolean).length; });
+    document.getElementById('sub').textContent = `${done}/${total} main sets done${S.easy ? ' · easy week' : ''}`;
+  } else if (type === 'sprint') {
+    total = 6; done = Math.min(6, [0, 1, 2, 3, 4, 5, 6, 7].filter(i => S.cticks['sp' + i]).length);
+    document.getElementById('sub').textContent = `Sprint day · ${done}/6 sprints`;
+  } else {
+    total = 1; done = S.done[selKey()] ? 1 : 0;
+    document.getElementById('sub').textContent = type === 'walk' ? 'Walk day · 45–60 min' : 'Rest day';
+  }
+  if (S.done[selKey()]) { done = total; if (type !== 'lift') document.getElementById('sub').textContent = `${LABEL[type]} day · ✓ logged`; }
   document.getElementById('bar').style.width = (total ? done / total * 100 : 0) + '%';
-  document.getElementById('sub').textContent = `${done}/${total} main sets done${S.easy ? ' · easy week' : ''}`;
-  document.getElementById('stats').textContent = S.sessions
-    ? `${S.sessions} workout${S.sessions > 1 ? 's' : ''} logged · last on ${new Date(S.last).toLocaleDateString()}`
-    : 'No workouts logged yet. Tap Done when you finish one.';
+  document.getElementById('stats').textContent = weekSummary() + (S.sessions
+    ? ` · ${S.sessions} workout${S.sessions > 1 ? 's' : ''} total`
+    : '');
 }
 
 function toast(msg) {
@@ -253,7 +368,14 @@ function toast(msg) {
 
 document.addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
-  if (b.dataset.tick) {
+  if (b.dataset.day !== undefined) {
+    sel = +b.dataset.day; render(); window.scrollTo({ top: 0 });
+  } else if (b.dataset.ctick) {
+    const id = b.dataset.ctick;
+    S.cticks[id] = !S.cticks[id];
+    if (S.cticks[id] && id.startsWith('sp')) startTimer(120);
+    save(); render();
+  } else if (b.dataset.tick) {
     const id = b.dataset.tick, i = +b.dataset.i, e = ALL.find(x => x.id === id);
     const t = S.ticks[id] = S.ticks[id] || [];
     t[i] = !t[i];
@@ -269,11 +391,25 @@ document.addEventListener('click', ev => {
 
 document.getElementById('easy').onclick = () => { S.easy = !S.easy; save(); render(); };
 document.getElementById('finish').onclick = () => {
-  const any = Object.values(S.ticks).some(t => t.some(Boolean));
-  if (!any) { toast('Tick some sets first'); return; }
-  if (!confirm('Finish this workout? Ticks will be cleared, weights are kept.')) return;
-  S.sessions++; S.last = Date.now(); S.ticks = {}; save(); render(); stopTimer();
-  toast('Workout logged. Nice work!');
+  const type = PLAN[sel], key = selKey();
+  if (type === 'rest') return;
+  if (S.done[key]) { toast('Already logged for this day'); return; }
+  if (type === 'lift') {
+    const any = Object.values(S.ticks).some(t => t.some(Boolean));
+    if (!any) { toast('Tick some sets first'); return; }
+    if (!confirm('Finish this workout? Ticks will be cleared, weights are kept.')) return;
+    S.sessions++; S.last = Date.now(); S.ticks = {};
+    toast('Workout logged. Nice work!');
+  } else if (type === 'sprint') {
+    if (![0, 1, 2, 3, 4, 5, 6, 7].some(i => S.cticks['sp' + i])) { toast('Tick your sprints first'); return; }
+    if (!confirm('Finish sprint day?')) return;
+    S.sprintCount++; S.cticks = {};
+    toast('Sprint day logged');
+  } else {
+    if (!confirm('Mark the walk as done?')) return;
+    toast('Walk logged');
+  }
+  S.done[key] = type; save(); render(); stopTimer();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 document.getElementById('reset').onclick = () => {
@@ -287,7 +423,7 @@ document.getElementById('export').onclick = async () => {
 };
 document.getElementById('import').onclick = () => {
   const txt = prompt('Paste your backup text:'); if (!txt) return;
-  try { const s = JSON.parse(txt); if (!s.w) throw 0; S = s; save(); render(); toast('Backup restored'); }
+  try { const s = JSON.parse(txt); if (!s.w) throw 0; S = fill(s); save(); render(); toast('Backup restored'); }
   catch (e) { toast('That backup text is not valid'); }
 };
 
